@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spotiamp</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=VT323&family=Press+Start+2P&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/winamp.css">
+</head>
+<body>
+
+<!-- Login gate -->
+<div id="login-screen" class="login-screen">
+  <div class="login-box">
+    <div class="login-title">SPOTIAMP</div>
+    <p class="login-sub">Real playback via your Spotify account. Requires Spotify&nbsp;Premium.</p>
+    <button id="login-btn" class="chrome-btn">Connect to Spotify</button>
+    <p id="login-error" class="login-error"></p>
+    <p class="login-hint">Haven't set a Client ID yet? Edit <code>js/config.js</code> first.</p>
+  </div>
+</div>
+
+<div id="app" class="app hidden">
+
+  <!-- MAIN PLAYER WINDOW -->
+  <section class="win main-win" id="main-win">
+    <div class="titlebar-trim"></div>
+    <header class="titlebar" data-drag="main">
+      <span class="titlebar-logo" aria-hidden="true">&asymp;</span>
+      <span class="titlebar-pinstripe"></span>
+      <span class="titlebar-text">SPOTIAMP</span>
+      <span class="titlebar-pinstripe"></span>
+      <div class="titlebar-btns">
+        <button class="tb-circle" id="btn-shade" title="Shade">&#9679;</button>
+        <button class="tb-btn" id="btn-logout" title="Log out">X</button>
+      </div>
+    </header>
+
+    <div class="win-body">
+      <div class="top-row">
+        <div class="viz-block" title="Stylized visualizer (Spotify streams are DRM-protected, so this reacts to playback state rather than raw audio)">
+          <div class="viz-scale"><span>0</span><span>5</span><span>10</span></div>
+          <div class="viz-bars" id="viz-bars">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
+        </div>
+
+        <div class="lcd-track-block">
+          <div class="marquee-window">
+            <div class="marquee-text" id="marquee-text">Not connected &mdash; log in to start playback&hellip;</div>
+          </div>
+          <div class="lcd-meta">
+            <span id="time-inline">0:00</span>
+            <span class="lcd-box" title="Spotify never exposes a per-track bitrate to any web app (its own player included) — the stream is DRM-protected and adaptive, so there's no real number to show here.">&mdash;</span>
+            <span>kbps</span>
+            <span class="lcd-box" title="Same limitation as kbps — sample rate isn't exposed either.">&mdash;</span>
+            <span>kHz</span>
+            <span class="lcd-dim">mono</span>
+            <span class="lcd-lit">stereo</span>
+            <span class="lcd-box" id="meta-quality">PREMIUM</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="seek-row">
+        <input type="range" id="seek-bar" class="seek-bar" min="0" max="1000" value="0">
+        <input type="range" id="volume-bar" class="mini-slider" min="0" max="100" value="50" title="Volume">
+        <button class="xp-btn toggle-btn eq-pl-btn" id="btn-eq-toggle" title="Equalizer"><span class="flag">&#9873;</span>EQ</button>
+        <button class="xp-btn toggle-btn eq-pl-btn" id="btn-pl-toggle" title="Playlist"><span class="flag">&#9873;</span>PL</button>
+      </div>
+
+      <div class="balance-row">
+        <input type="range" id="balance-bar" class="balance-slider" min="-100" max="100" value="0" title="Balance (decorative — Spotify doesn't expose a stereo pan control)">
+      </div>
+
+      <div class="control-row">
+        <div class="transport-main">
+          <button class="xp-btn" id="btn-prev" title="Previous">&#9664;&#9664;</button>
+          <button class="xp-btn" id="btn-play" title="Play">&#9654;</button>
+          <button class="xp-btn" id="btn-pause" title="Pause">&#10073;&#10073;</button>
+          <button class="xp-btn" id="btn-stop" title="Stop">&#9632;</button>
+          <button class="xp-btn" id="btn-next" title="Next">&#9654;&#9654;</button>
+          <button class="xp-btn" id="btn-eject" title="Open playlist search">&#9650;</button>
+        </div>
+        <div class="transport-toggles">
+          <button class="xp-btn toggle-btn" id="btn-shuffle" title="Shuffle"><span class="flag">&#9873;</span>SHUFFLE</button>
+          <button class="xp-btn toggle-btn" id="btn-repeat" title="Repeat"><span class="flag">&#9873;</span>&#8635;</button>
+        </div>
+      </div>
+    </div>
+    <div class="resize-handle"></div>
+  </section>
+
+  <!-- PLAYLIST / SEARCH WINDOW -->
+  <section class="win playlist-win" id="playlist-win">
+    <header class="titlebar" data-drag="playlist">
+      <span class="titlebar-text">PLAYLIST EDITOR / SEARCH</span>
+      <div class="titlebar-btns">
+        <button class="tb-btn" id="btn-pl-close" title="Close">X</button>
+      </div>
+    </header>
+
+    <div class="win-body playlist-body">
+      <form id="search-form" class="search-form">
+        <input type="text" id="search-input" class="search-input" placeholder="Search tracks on Spotify&hellip;" autocomplete="off">
+        <button type="submit" class="xp-btn search-btn">FIND</button>
+      </form>
+
+      <div id="pl-status" class="pl-status"></div>
+
+      <ul id="results-list" class="results-list"></ul>
+    </div>
+  </section>
+
+  <!-- EQUALIZER WINDOW -->
+  <section class="win eq-win hidden" id="eq-win">
+    <header class="titlebar" data-drag="eq">
+      <span class="titlebar-text">GRAPHIC EQUALIZER</span>
+      <div class="titlebar-btns">
+        <button class="tb-btn" id="btn-eq-close" title="Close">X</button>
+      </div>
+    </header>
+
+    <div class="win-body eq-body">
+      <div class="eq-toolbar">
+        <button class="xp-btn toggle-btn" id="btn-eq-on" title="Toggle equalizer LED (visual only)">ON</button>
+        <select id="eq-preset" class="eq-preset">
+          <option>Flat</option>
+          <option>Rock</option>
+          <option>Pop</option>
+          <option>Jazz</option>
+          <option>Bass Boost</option>
+          <option>Treble Boost</option>
+        </select>
+        <span class="eq-note" tabindex="0" title="Spotify's Web Playback SDK streams DRM-protected audio and never exposes raw samples or an insertable Web Audio node, so this equalizer is stylized only — moving it does not change the actual sound.">i</span>
+      </div>
+
+      <div class="eq-sliders" id="eq-sliders">
+        <div class="eq-band eq-band-pre">
+          <div class="eq-slider-wrap"><input type="range" class="eq-slider" id="eq-preamp" min="-12" max="12" value="0"></div>
+          <span class="eq-band-label">PRE</span>
+        </div>
+        <div class="eq-divider"></div>
+        <div class="eq-band" data-freq="60"><div class="eq-slider-wrap"><input type="range" class="eq-slider" min="-12" max="12" value="0"></div><span class="eq-band-label">60</span></div>
+        <div class="eq-band" data-freq="170"><div class="eq-slider-wrap"><input type="range" class="eq-slider" min="-12" max="12" value="0"></div><span class="eq-band-label">170</span></div>
+        <div class="eq-band" data-freq="310"><div class="eq-slider-wrap"><input type="range" class="eq-slider" min="-12" max="12" value="0"></div><span class="eq-band-label">310</span></div>
+        <div class="eq-band" data-freq="600"><div class="eq-slider-wrap"><input type="range" class="eq-slider" min="-12" max="12" value="0"></div><span class="eq-band-label">600</span></div>
+        <div class="eq-band" data-freq="1K"><div class="eq-slider-wrap"><input type="range" class="eq-slider" min="-12" max="12" value="0"></div><span class="eq-band-label">1K</span></div>
+        <div class="eq-band" data-freq="3K"><div class="eq-slider-wrap"><input type="range" class="eq-slider" min="-12" max="12" value="0"></div><span class="eq-band-label">3K</span></div>
+        <div class="eq-band" data-freq="6K"><div class="eq-slider-wrap"><input type="range" class="eq-slider" min="-12" max="12" value="0"></div><span class="eq-band-label">6K</span></div>
+        <div class="eq-band" data-freq="12K"><div class="eq-slider-wrap"><input type="range" class="eq-slider" min="-12" max="12" value="0"></div><span class="eq-band-label">12K</span></div>
+        <div class="eq-band" data-freq="14K"><div class="eq-slider-wrap"><input type="range" class="eq-slider" min="-12" max="12" value="0"></div><span class="eq-band-label">14K</span></div>
+        <div class="eq-band" data-freq="16K"><div class="eq-slider-wrap"><input type="range" class="eq-slider" min="-12" max="12" value="0"></div><span class="eq-band-label">16K</span></div>
+      </div>
+    </div>
+    <div class="resize-handle"></div>
+  </section>
+
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/player.js"></script>
+<script src="js/eq.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
