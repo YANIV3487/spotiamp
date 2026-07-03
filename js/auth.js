@@ -1,5 +1,9 @@
 // Spotify Authorization Code + PKCE flow (no client secret needed, safe for a static site).
 const AUTH = (() => {
+  // Always derived from the current URL — never a per-deployment file — so this
+  // works unmodified whether it's run locally or hosted at any stable URL.
+  const REDIRECT_URI = window.location.origin + window.location.pathname;
+
   const SCOPES = [
     'streaming',
     'user-read-email',
@@ -29,15 +33,41 @@ const AUTH = (() => {
     return crypto.subtle.digest('SHA-256', data);
   }
 
+  // Client ID isn't a secret (it's required to be public for PKCE), so it's fine in
+  // localStorage. This lets a single hosted deployment be reused by anyone with their
+  // own Spotify app, without editing/redeploying js/config.js per person.
+  function getClientId() {
+    const stored = localStorage.getItem('spotify_client_id');
+    if (stored) return stored;
+    if (typeof CONFIG !== 'undefined' && CONFIG.CLIENT_ID && CONFIG.CLIENT_ID !== 'YOUR_SPOTIFY_CLIENT_ID_HERE') {
+      return CONFIG.CLIENT_ID;
+    }
+    return null;
+  }
+
+  function setClientId(id) {
+    localStorage.setItem('spotify_client_id', id.trim());
+  }
+
+  function clearClientId() {
+    // Tokens were minted for the old client id, so they're meaningless once it changes.
+    ['spotify_client_id', 'spotify_access_token', 'spotify_refresh_token', 'spotify_token_expires', 'spotify_code_verifier']
+      .forEach(k => localStorage.removeItem(k));
+  }
+
+  function hasClientId() {
+    return !!getClientId();
+  }
+
   async function redirectToAuthorize() {
     const codeVerifier = generateRandomString(64);
     const codeChallenge = base64UrlEncode(await sha256(codeVerifier));
     localStorage.setItem('spotify_code_verifier', codeVerifier);
 
     const params = new URLSearchParams({
-      client_id: CONFIG.CLIENT_ID,
+      client_id: getClientId(),
       response_type: 'code',
-      redirect_uri: CONFIG.REDIRECT_URI,
+      redirect_uri: REDIRECT_URI,
       scope: SCOPES,
       code_challenge_method: 'S256',
       code_challenge: codeChallenge
@@ -57,10 +87,10 @@ const AUTH = (() => {
   async function exchangeCodeForToken(code) {
     const codeVerifier = localStorage.getItem('spotify_code_verifier');
     const params = new URLSearchParams({
-      client_id: CONFIG.CLIENT_ID,
+      client_id: getClientId(),
       grant_type: 'authorization_code',
       code,
-      redirect_uri: CONFIG.REDIRECT_URI,
+      redirect_uri: REDIRECT_URI,
       code_verifier: codeVerifier
     });
 
@@ -79,7 +109,7 @@ const AUTH = (() => {
     if (!refresh_token) return null;
 
     const params = new URLSearchParams({
-      client_id: CONFIG.CLIENT_ID,
+      client_id: getClientId(),
       grant_type: 'refresh_token',
       refresh_token
     });
@@ -109,7 +139,7 @@ const AUTH = (() => {
   function logout() {
     ['spotify_access_token', 'spotify_refresh_token', 'spotify_token_expires', 'spotify_code_verifier']
       .forEach(k => localStorage.removeItem(k));
-    window.location.href = CONFIG.REDIRECT_URI;
+    window.location.href = REDIRECT_URI;
   }
 
   async function handleRedirect() {
@@ -117,16 +147,20 @@ const AUTH = (() => {
     const code = params.get('code');
     const error = params.get('error');
     if (error) {
-      window.history.replaceState({}, document.title, CONFIG.REDIRECT_URI);
+      window.history.replaceState({}, document.title, REDIRECT_URI);
       return { error };
     }
     if (code) {
       const result = await exchangeCodeForToken(code);
-      window.history.replaceState({}, document.title, CONFIG.REDIRECT_URI);
+      window.history.replaceState({}, document.title, REDIRECT_URI);
       return result;
     }
     return null;
   }
 
-  return { redirectToAuthorize, handleRedirect, getValidToken, isLoggedIn, logout };
+  return {
+    redirectToAuthorize, handleRedirect, getValidToken, isLoggedIn, logout,
+    getClientId, setClientId, clearClientId, hasClientId,
+    REDIRECT_URI
+  };
 })();

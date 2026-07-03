@@ -15,9 +15,22 @@
   <div class="login-box">
     <div class="login-title">SPOTIAMP</div>
     <p class="login-sub">Real playback via your Spotify account. Requires Spotify&nbsp;Premium.</p>
-    <button id="login-btn" class="chrome-btn">Connect to Spotify</button>
+
+    <div id="client-id-setup">
+      <p class="login-sub small">Each person needs their own free <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">Spotify app</a> (Client ID isn't a secret, but the app it belongs to controls who can log in).</p>
+      <form id="client-id-form" class="client-id-form">
+        <input type="text" id="client-id-input" class="search-input" placeholder="Your Spotify Client ID" autocomplete="off">
+        <button type="submit" class="xp-btn">Save</button>
+      </form>
+      <p class="login-hint">Register this exact Redirect URI in that app's settings:<br><code id="redirect-uri-display"></code></p>
+    </div>
+
+    <div id="client-id-ready" class="hidden">
+      <button id="login-btn" class="chrome-btn">Connect to Spotify</button>
+      <p class="login-hint">Using Client ID &hellip;<span id="client-id-suffix"></span> &mdash; <a href="#" id="change-client-id">use a different one</a></p>
+    </div>
+
     <p id="login-error" class="login-error"></p>
-    <p class="login-hint">Haven't set a Client ID yet? Edit <code>js/config.js</code> first.</p>
   </div>
 </div>
 

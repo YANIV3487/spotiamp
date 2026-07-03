@@ -4,6 +4,14 @@
   const loginErrorEl = document.getElementById('login-error');
   const app = document.getElementById('app');
 
+  const clientIdSetup = document.getElementById('client-id-setup');
+  const clientIdReady = document.getElementById('client-id-ready');
+  const clientIdForm = document.getElementById('client-id-form');
+  const clientIdInput = document.getElementById('client-id-input');
+  const redirectUriDisplay = document.getElementById('redirect-uri-display');
+  const clientIdSuffix = document.getElementById('client-id-suffix');
+  const changeClientIdLink = document.getElementById('change-client-id');
+
   const marqueeText = document.getElementById('marquee-text');
   const timeInline = document.getElementById('time-inline');
   const metaQuality = document.getElementById('meta-quality');
@@ -270,8 +278,39 @@
     }
   });
 
+  // ---- Client ID setup (lets one hosted deployment be reused with anyone's own Spotify app) ----
+  function refreshClientIdUI() {
+    redirectUriDisplay.textContent = AUTH.REDIRECT_URI;
+    if (AUTH.hasClientId()) {
+      clientIdSuffix.textContent = AUTH.getClientId().slice(-6);
+      clientIdSetup.classList.add('hidden');
+      clientIdReady.classList.remove('hidden');
+    } else {
+      clientIdSetup.classList.remove('hidden');
+      clientIdReady.classList.add('hidden');
+    }
+  }
+
+  clientIdForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const value = clientIdInput.value.trim();
+    if (!value) return;
+    AUTH.setClientId(value);
+    clientIdInput.value = '';
+    refreshClientIdUI();
+  });
+
+  changeClientIdLink.addEventListener('click', e => {
+    e.preventDefault();
+    AUTH.clearClientId();
+    refreshClientIdUI();
+    clientIdInput.focus();
+  });
+
   // ---- Boot ----
   async function boot() {
+    refreshClientIdUI();
+
     const redirectResult = await AUTH.handleRedirect();
     if (redirectResult && redirectResult.error) {
       loginErrorEl.textContent = `Spotify login error: ${redirectResult.error}`;

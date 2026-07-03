@@ -84,12 +84,29 @@ html, body {
   font-size: 14px;
   opacity: .6;
   margin-top: 16px;
+  line-height: 1.6;
 }
 .login-hint code {
   background: var(--metal-3);
   padding: 1px 5px;
   border-radius: 2px;
+  word-break: break-all;
 }
+.login-hint a, .login-sub a {
+  color: var(--gold);
+}
+
+.login-sub.small {
+  font-size: 15px;
+  margin-bottom: 14px;
+}
+
+.client-id-form {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.client-id-form .search-input { flex: 1; }
 
 .chrome-btn {
   font-family: 'Press Start 2P', monospace;
