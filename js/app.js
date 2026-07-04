@@ -15,7 +15,7 @@
   const marqueeText = document.getElementById('marquee-text');
   const timeInline = document.getElementById('time-inline');
   const metaQuality = document.getElementById('meta-quality');
-  const vizBars = Array.from(document.getElementById('viz-bars').children);
+  const vizCanvas = document.getElementById('viz-canvas');
 
   const seekBar = document.getElementById('seek-bar');
   const volumeBar = document.getElementById('volume-bar');
@@ -37,12 +37,20 @@
   const resultsList = document.getElementById('results-list');
   const plStatus = document.getElementById('pl-status');
 
+  const lyricsWin = document.getElementById('lyrics-win');
+  const btnLyricsToggle = document.getElementById('btn-lyrics-toggle');
+  const btnLyricsClose = document.getElementById('btn-lyrics-close');
+  const lyricsStatus = document.getElementById('lyrics-status');
+  const lyricsTextEl = document.getElementById('lyrics-text');
+
   let latestState = null;
   let isSeeking = false;
   let repeatMode = 0; // 0 off, 1 context, 2 track
   let currentPlayingUri = null;
-  let vizTimer = null;
   let tickTimer = null;
+  let lastLyricsUri = null;
+  let lyricsToken = 0;
+  const lyricsCache = new Map(); // track uri -> lyrics text
 
   function fmtTime(ms) {
     if (!ms || ms < 0) ms = 0;
@@ -73,15 +81,42 @@
     window.addEventListener('mouseup', () => dragging = false);
   }
 
-  function startViz() {
-    if (vizTimer) return;
-    vizTimer = setInterval(() => {
-      const playing = latestState && !latestState.paused;
-      vizBars.forEach(bar => {
-        const target = playing ? 4 + Math.random() * 36 : 4;
-        bar.style.height = target + 'px';
-      });
-    }, 140);
+  function setLyricsStatus(message, isError = false) {
+    lyricsStatus.textContent = message || '';
+    lyricsStatus.classList.toggle('error', isError);
+  }
+
+  async function loadLyricsFor(track) {
+    if (!track) {
+      lastLyricsUri = null;
+      lyricsTextEl.textContent = '';
+      setLyricsStatus('Nothing playing.');
+      return;
+    }
+    if (track.uri === lastLyricsUri) return;
+    lastLyricsUri = track.uri;
+
+    const cached = lyricsCache.get(track.uri);
+    if (cached) {
+      lyricsTextEl.textContent = cached;
+      setLyricsStatus('');
+      return;
+    }
+
+    const myToken = ++lyricsToken;
+    lyricsTextEl.textContent = '';
+    setLyricsStatus('Loading lyrics…');
+    try {
+      const text = await LYRICS.fetch(track.artists[0].name, track.name);
+      if (myToken !== lyricsToken) return; // a newer track superseded this lookup
+      lyricsCache.set(track.uri, text);
+      lyricsTextEl.textContent = text;
+      setLyricsStatus('');
+    } catch (err) {
+      if (myToken !== lyricsToken) return;
+      lyricsTextEl.textContent = '';
+      setLyricsStatus(err.message, true);
+    }
   }
 
   function startTicker() {
@@ -119,6 +154,8 @@
       renderTrack(null);
       currentPlayingUri = null;
       highlightPlayingResult();
+      VIZ.setPlaying(false);
+      loadLyricsFor(null);
       return;
     }
     latestState = {
@@ -132,6 +169,8 @@
     renderTrack(track, state.paused);
     currentPlayingUri = track ? track.uri : null;
     highlightPlayingResult();
+    VIZ.setPlaying(!state.paused);
+    loadLyricsFor(track);
 
     updateTimeUI(state.position, state.duration);
 
@@ -253,6 +292,9 @@
   btnEqToggle.addEventListener('click', () => eqWin.classList.toggle('hidden'));
   btnEqClose.addEventListener('click', () => eqWin.classList.add('hidden'));
 
+  btnLyricsToggle.addEventListener('click', () => lyricsWin.classList.toggle('hidden'));
+  btnLyricsClose.addEventListener('click', () => lyricsWin.classList.add('hidden'));
+
   btnLogout.addEventListener('click', () => AUTH.logout());
 
   const mainWin = document.getElementById('main-win');
@@ -324,6 +366,7 @@
 
     loginScreen.classList.add('hidden');
     app.classList.remove('hidden');
+    VIZ.init(vizCanvas);
 
     SpotifyPlayer.on('state_changed', handleStateChanged);
     SpotifyPlayer.on('error', msg => { marqueeText.textContent = `Error: ${msg}`; });
@@ -335,13 +378,13 @@
       marqueeText.textContent = 'Could not start Spotify player — is Premium active?';
     }
 
-    startViz();
     startTicker();
   }
 
   makeDraggable(document.getElementById('main-win'), document.querySelector('[data-drag="main"]'));
   makeDraggable(document.getElementById('playlist-win'), document.querySelector('[data-drag="playlist"]'));
   makeDraggable(document.getElementById('eq-win'), document.querySelector('[data-drag="eq"]'));
+  makeDraggable(document.getElementById('lyrics-win'), document.querySelector('[data-drag="lyrics"]'));
   EQ.init();
 
   document.getElementById('login-btn').addEventListener('click', () => AUTH.redirectToAuthorize());
