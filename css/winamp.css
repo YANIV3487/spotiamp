@@ -669,52 +669,6 @@ input[type="range"]::-moz-range-thumb {
   height: 16px;
 }
 
-/* ---------------- Ambient background visualizer ---------------- */
-#bg-viz-canvas {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.app {
-  position: relative;
-  z-index: 1;
-}
-
-.login-screen {
-  z-index: 100;
-}
-
-/* ---------------- Floating lyrics overlay ---------------- */
-.lyrics-overlay {
-  position: fixed;
-  left: 50%;
-  bottom: 10%;
-  transform: translateX(-50%);
-  z-index: 2;
-  max-width: 82vw;
-  text-align: center;
-  pointer-events: none;
-}
-
-.lyrics-line {
-  display: inline-block;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--lcd-green);
-  text-shadow: 0 0 10px rgba(67,224,74,.8), 0 0 26px rgba(67,224,74,.4);
-  opacity: 0;
-  transform: translateY(14px);
-  transition: opacity 1s ease, transform 1s ease;
-}
-
-.lyrics-line.show {
-  opacity: .92;
-  transform: translateY(0);
-}
-
 /* Small screens: stack windows */
 @media (max-width: 800px) {
   .app { flex-direction: column; align-items: center; }
