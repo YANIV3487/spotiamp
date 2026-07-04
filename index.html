@@ -10,6 +10,14 @@
 </head>
 <body>
 
+<!-- Ambient full-page background visualizer (behind everything, purely cosmetic) -->
+<canvas id="bg-viz-canvas"></canvas>
+
+<!-- Lyrics overlay: fades one line at a time over the page while a track plays -->
+<div id="lyrics-overlay" class="lyrics-overlay hidden">
+  <div id="lyrics-line" class="lyrics-line"></div>
+</div>
+
 <!-- Login gate -->
 <div id="login-screen" class="login-screen">
   <div class="login-box">
@@ -52,9 +60,12 @@
 
     <div class="win-body">
       <div class="top-row">
-        <div class="viz-block" title="Stylized visualizer — click to switch between spectrum and scope view (Spotify streams are DRM-protected, so this reacts to playback state rather than raw audio)">
+        <div class="viz-block" title="Stylized visualizer (Spotify streams are DRM-protected, so this reacts to playback state rather than raw audio)">
           <div class="viz-scale"><span>0</span><span>5</span><span>10</span></div>
-          <canvas class="viz-canvas" id="viz-canvas"></canvas>
+          <div class="viz-bars" id="viz-bars">
+            <span></span><span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span><span></span>
+          </div>
         </div>
 
         <div class="lcd-track-block">
@@ -79,7 +90,7 @@
         <input type="range" id="volume-bar" class="mini-slider" min="0" max="100" value="50" title="Volume">
         <button class="xp-btn toggle-btn eq-pl-btn" id="btn-eq-toggle" title="Equalizer"><span class="flag">&#9873;</span>EQ</button>
         <button class="xp-btn toggle-btn eq-pl-btn" id="btn-pl-toggle" title="Playlist"><span class="flag">&#9873;</span>PL</button>
-        <button class="xp-btn toggle-btn eq-pl-btn" id="btn-lyrics-toggle" title="Lyrics"><span class="flag">&#9873;</span>LYR</button>
+        <button class="xp-btn toggle-btn eq-pl-btn" id="btn-lyrics-toggle" title="Toggle floating lyrics overlay"><span class="flag">&#9873;</span>LYR</button>
       </div>
 
       <div class="balance-row">
@@ -169,23 +180,6 @@
     <div class="resize-handle"></div>
   </section>
 
-  <!-- LYRICS WINDOW -->
-  <section class="win lyrics-win hidden" id="lyrics-win">
-    <header class="titlebar" data-drag="lyrics">
-      <span class="titlebar-text">LYRICS</span>
-      <div class="titlebar-btns">
-        <button class="tb-btn" id="btn-lyrics-close" title="Close">X</button>
-      </div>
-    </header>
-
-    <div class="win-body lyrics-body">
-      <div id="lyrics-status" class="pl-status"></div>
-      <div id="lyrics-text" class="lyrics-text"></div>
-      <div class="lyrics-caption" title="Spotify's API doesn't expose lyrics to third-party apps, so this looks them up by artist/title on a free public lyrics database instead. Plain text only — not time-synced to playback — and not every track will have a match.">via lyrics.ovh &middot; unsynced, best-effort match</div>
-    </div>
-    <div class="resize-handle"></div>
-  </section>
-
 </div>
 
 <script src="js/config.js"></script>
@@ -193,7 +187,7 @@
 <script src="js/player.js"></script>
 <script src="js/eq.js"></script>
 <script src="js/lyrics.js"></script>
-<script src="js/viz.js"></script>
+<script src="js/bgviz.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

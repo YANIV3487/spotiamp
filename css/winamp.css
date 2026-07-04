@@ -265,13 +265,20 @@ html, body {
   line-height: 1;
 }
 
-.viz-canvas {
+.viz-bars {
   flex: 1;
-  min-width: 0;
-  width: 100%;
-  height: 100%;
-  cursor: pointer;
-  display: block;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 2px;
+}
+
+.viz-bars span {
+  width: 5px;
+  height: 4px;
+  background: linear-gradient(180deg, var(--lcd-green), var(--lcd-green-dim));
+  box-shadow: 0 0 4px rgba(67,224,74,.6);
+  transition: height .12s ease;
 }
 
 .lcd-track-block {
@@ -662,41 +669,50 @@ input[type="range"]::-moz-range-thumb {
   height: 16px;
 }
 
-/* ---------------- Lyrics window ---------------- */
-.lyrics-win { width: 320px; }
-
-.lyrics-body {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  height: 380px;
+/* ---------------- Ambient background visualizer ---------------- */
+#bg-viz-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
 }
 
-.lyrics-text {
-  flex: 1;
-  overflow-y: auto;
-  background: var(--lcd-bg);
-  border: 1px solid var(--metal-shadow);
-  box-shadow: inset 0 0 6px rgba(0,0,0,.8);
-  color: var(--lcd-green);
-  font-size: 15px;
-  line-height: 1.5;
-  padding: 8px 10px;
-  white-space: pre-wrap;
+.app {
+  position: relative;
+  z-index: 1;
 }
 
-.lyrics-text::-webkit-scrollbar { width: 10px; }
-.lyrics-text::-webkit-scrollbar-track { background: var(--metal-3); }
-.lyrics-text::-webkit-scrollbar-thumb {
-  background: var(--metal-highlight);
-  border: 1px solid var(--metal-shadow);
+.login-screen {
+  z-index: 100;
 }
 
-.lyrics-caption {
-  font-size: 11px;
-  color: var(--gold-dim);
+/* ---------------- Floating lyrics overlay ---------------- */
+.lyrics-overlay {
+  position: fixed;
+  left: 50%;
+  bottom: 10%;
+  transform: translateX(-50%);
+  z-index: 2;
+  max-width: 82vw;
   text-align: center;
-  cursor: help;
+  pointer-events: none;
+}
+
+.lyrics-line {
+  display: inline-block;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--lcd-green);
+  text-shadow: 0 0 10px rgba(67,224,74,.8), 0 0 26px rgba(67,224,74,.4);
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 1s ease, transform 1s ease;
+}
+
+.lyrics-line.show {
+  opacity: .92;
+  transform: translateY(0);
 }
 
 /* Small screens: stack windows */

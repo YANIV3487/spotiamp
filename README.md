@@ -33,8 +33,9 @@ Because the Client ID lives in the visitor's own browser storage, not in the cod
 
 ## Using it
 
-- **EQ** / **PL** / **LYR** (next to the volume slider) open the graphic equalizer, Playlist/Search, and Lyrics windows. Search failures (expired token, no active device yet, etc.) are reported as text under the search box instead of failing silently.
-- The visualizer (top-left of the main window) animates while a track plays — click it to switch between a spectrum-bar view and an oscilloscope-style wave. Lyrics load automatically for whatever's currently playing.
+- **EQ** / **PL** (next to the volume slider) open the graphic equalizer and Playlist/Search windows. Search failures (expired token, no active device yet, etc.) are reported as text under the search box instead of failing silently.
+- **LYR** toggles a floating lyrics overlay: one line at a time fades in near the bottom of the page and auto-advances every few seconds while a track plays (pausing playback pauses the cycle too). Lyrics load automatically for whatever's currently playing.
+- The page background animates while a track plays — a soft equalizer glow along the bottom edge with drifting embers, behind all the windows.
 - The eject button (▲, bottom row) opens the Playlist/Search window and focuses the search box.
 - Transport buttons, seek bar, and volume behave like classic Winamp; the balance slider is present for looks (see limitations below).
 - **SHUFFLE** / the loop-icon button toggle Spotify's shuffle and repeat (off → context → track) modes.
@@ -44,8 +45,8 @@ Because the Client ID lives in the visitor's own browser storage, not in the cod
 
 ## Known limitations
 
-- The visualizer and the equalizer are both stylized, not real audio processing — Spotify's Web Playback SDK streams DRM-protected audio through a sandboxed decoder and never exposes raw samples or an insertable Web Audio node. The visualizer reacts to play/pause state instead of an FFT, and moving the EQ sliders doesn't change the actual sound.
-- Lyrics come from a free third-party lookup ([lyrics.ovh](https://lyrics.ovh)), not Spotify — Spotify's own API doesn't expose lyrics to any third-party app. They're plain text (not synced to playback position) and matched by artist/title, so some tracks (rare songs, live/remix versions, non-English titles) won't be found.
+- The visualizer (both the small LCD bars and the full-page background glow) and the equalizer are all stylized, not real audio processing — Spotify's Web Playback SDK streams DRM-protected audio through a sandboxed decoder and never exposes raw samples or an insertable Web Audio node. They react to play/pause state instead of an FFT, and moving the EQ sliders doesn't change the actual sound.
+- Lyrics come from a free third-party lookup ([lyrics.ovh](https://lyrics.ovh)), not Spotify — Spotify's own API doesn't expose lyrics to any third-party app. They're plain text lines cycled on a fixed timer, not synced to actual playback position, and matched by artist/title, so some tracks (rare songs, live/remix versions, non-English titles) won't be found.
 - The kbps/kHz readout shows `—` rather than real numbers — Spotify doesn't expose per-track bitrate or sample rate to any web app, official or third-party. The balance slider is decorative for the same reason (no stereo-pan API).
 - Access tokens are stored in `localStorage` and refreshed automatically; logging out clears them.
 - This app only controls playback on **this** browser tab's Spotify Connect device — switching devices from the Spotify app elsewhere will move playback away from it.

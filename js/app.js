@@ -15,7 +15,8 @@
   const marqueeText = document.getElementById('marquee-text');
   const timeInline = document.getElementById('time-inline');
   const metaQuality = document.getElementById('meta-quality');
-  const vizCanvas = document.getElementById('viz-canvas');
+  const vizBars = Array.from(document.getElementById('viz-bars').children);
+  const bgVizCanvas = document.getElementById('bg-viz-canvas');
 
   const seekBar = document.getElementById('seek-bar');
   const volumeBar = document.getElementById('volume-bar');
@@ -37,20 +38,22 @@
   const resultsList = document.getElementById('results-list');
   const plStatus = document.getElementById('pl-status');
 
-  const lyricsWin = document.getElementById('lyrics-win');
+  const lyricsOverlay = document.getElementById('lyrics-overlay');
+  const lyricsLineEl = document.getElementById('lyrics-line');
   const btnLyricsToggle = document.getElementById('btn-lyrics-toggle');
-  const btnLyricsClose = document.getElementById('btn-lyrics-close');
-  const lyricsStatus = document.getElementById('lyrics-status');
-  const lyricsTextEl = document.getElementById('lyrics-text');
 
   let latestState = null;
   let isSeeking = false;
   let repeatMode = 0; // 0 off, 1 context, 2 track
   let currentPlayingUri = null;
+  let vizTimer = null;
   let tickTimer = null;
   let lastLyricsUri = null;
   let lyricsToken = 0;
-  const lyricsCache = new Map(); // track uri -> lyrics text
+  let lyricsLines = [];
+  let lyricsLineIdx = 0;
+  let lyricsCycleTimer = null;
+  const lyricsCache = new Map(); // track uri -> array of lyric lines
 
   function fmtTime(ms) {
     if (!ms || ms < 0) ms = 0;
@@ -81,41 +84,74 @@
     window.addEventListener('mouseup', () => dragging = false);
   }
 
-  function setLyricsStatus(message, isError = false) {
-    lyricsStatus.textContent = message || '';
-    lyricsStatus.classList.toggle('error', isError);
+  function startViz() {
+    if (vizTimer) return;
+    vizTimer = setInterval(() => {
+      const playing = latestState && !latestState.paused;
+      vizBars.forEach(bar => {
+        const target = playing ? 4 + Math.random() * 36 : 4;
+        bar.style.height = target + 'px';
+      });
+    }, 140);
+  }
+
+  function showLyricsLine(text) {
+    lyricsLineEl.classList.remove('show');
+    void lyricsLineEl.offsetWidth; // force reflow so the fade transition restarts
+    lyricsLineEl.textContent = text || '';
+    if (text) lyricsLineEl.classList.add('show');
+  }
+
+  function stopLyricsCycle() {
+    if (lyricsCycleTimer) {
+      clearInterval(lyricsCycleTimer);
+      lyricsCycleTimer = null;
+    }
+  }
+
+  function startLyricsCycle() {
+    if (lyricsCycleTimer || lyricsLines.length === 0) return;
+    lyricsLineIdx = 0;
+    showLyricsLine(lyricsLines[0]);
+    lyricsCycleTimer = setInterval(() => {
+      lyricsLineIdx = (lyricsLineIdx + 1) % lyricsLines.length;
+      showLyricsLine(lyricsLines[lyricsLineIdx]);
+    }, 4500);
   }
 
   async function loadLyricsFor(track) {
     if (!track) {
       lastLyricsUri = null;
-      lyricsTextEl.textContent = '';
-      setLyricsStatus('Nothing playing.');
+      lyricsLines = [];
+      stopLyricsCycle();
+      showLyricsLine('');
       return;
     }
     if (track.uri === lastLyricsUri) return;
     lastLyricsUri = track.uri;
+    stopLyricsCycle();
 
     const cached = lyricsCache.get(track.uri);
     if (cached) {
-      lyricsTextEl.textContent = cached;
-      setLyricsStatus('');
+      lyricsLines = cached;
+      if (latestState && !latestState.paused) startLyricsCycle();
       return;
     }
 
     const myToken = ++lyricsToken;
-    lyricsTextEl.textContent = '';
-    setLyricsStatus('Loading lyrics…');
+    lyricsLines = [];
+    showLyricsLine('Loading lyrics…');
     try {
       const text = await LYRICS.fetch(track.artists[0].name, track.name);
       if (myToken !== lyricsToken) return; // a newer track superseded this lookup
-      lyricsCache.set(track.uri, text);
-      lyricsTextEl.textContent = text;
-      setLyricsStatus('');
+      const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+      lyricsLines = lines.length ? lines : [text.trim()];
+      lyricsCache.set(track.uri, lyricsLines);
+      if (latestState && !latestState.paused) startLyricsCycle();
     } catch (err) {
       if (myToken !== lyricsToken) return;
-      lyricsTextEl.textContent = '';
-      setLyricsStatus(err.message, true);
+      lyricsLines = [];
+      showLyricsLine(err.message);
     }
   }
 
@@ -154,7 +190,7 @@
       renderTrack(null);
       currentPlayingUri = null;
       highlightPlayingResult();
-      VIZ.setPlaying(false);
+      BGVIZ.setPlaying(false);
       loadLyricsFor(null);
       return;
     }
@@ -169,8 +205,10 @@
     renderTrack(track, state.paused);
     currentPlayingUri = track ? track.uri : null;
     highlightPlayingResult();
-    VIZ.setPlaying(!state.paused);
+    BGVIZ.setPlaying(!state.paused);
     loadLyricsFor(track);
+    if (state.paused) stopLyricsCycle();
+    else if (lyricsLines.length && !lyricsCycleTimer) startLyricsCycle();
 
     updateTimeUI(state.position, state.duration);
 
@@ -292,8 +330,10 @@
   btnEqToggle.addEventListener('click', () => eqWin.classList.toggle('hidden'));
   btnEqClose.addEventListener('click', () => eqWin.classList.add('hidden'));
 
-  btnLyricsToggle.addEventListener('click', () => lyricsWin.classList.toggle('hidden'));
-  btnLyricsClose.addEventListener('click', () => lyricsWin.classList.add('hidden'));
+  btnLyricsToggle.addEventListener('click', () => {
+    const nowHidden = lyricsOverlay.classList.toggle('hidden');
+    btnLyricsToggle.classList.toggle('active', !nowHidden);
+  });
 
   btnLogout.addEventListener('click', () => AUTH.logout());
 
@@ -366,7 +406,6 @@
 
     loginScreen.classList.add('hidden');
     app.classList.remove('hidden');
-    VIZ.init(vizCanvas);
 
     SpotifyPlayer.on('state_changed', handleStateChanged);
     SpotifyPlayer.on('error', msg => { marqueeText.textContent = `Error: ${msg}`; });
@@ -378,14 +417,15 @@
       marqueeText.textContent = 'Could not start Spotify player — is Premium active?';
     }
 
+    startViz();
     startTicker();
   }
 
   makeDraggable(document.getElementById('main-win'), document.querySelector('[data-drag="main"]'));
   makeDraggable(document.getElementById('playlist-win'), document.querySelector('[data-drag="playlist"]'));
   makeDraggable(document.getElementById('eq-win'), document.querySelector('[data-drag="eq"]'));
-  makeDraggable(document.getElementById('lyrics-win'), document.querySelector('[data-drag="lyrics"]'));
   EQ.init();
+  BGVIZ.init(bgVizCanvas);
 
   document.getElementById('login-btn').addEventListener('click', () => AUTH.redirectToAuthorize());
 
